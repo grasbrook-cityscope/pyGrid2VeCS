@@ -44,9 +44,15 @@ class Grid:
     def Local2Geo(self, x, y):
         bearing = self.tablerotation
 
+        x += 0.5 # connect midpoints
+        y += 0.5
+
+        x *= self.cellSize
+        y *= -self.cellSize # flip y axis (for northern hemisphere)
+
         # rotate and scale
-        new_x = x * self.cellSize * math.cos(math.radians(bearing)) - y * -self.cellSize * math.sin(math.radians(bearing))
-        new_y = x * self.cellSize * math.sin(math.radians(bearing)) + y * -self.cellSize * math.cos(math.radians(bearing))
+        new_x = x * math.cos(math.radians(bearing)) - y * math.sin(math.radians(bearing))
+        new_y = x * math.sin(math.radians(bearing)) + y * math.cos(math.radians(bearing))
 
         # convert to geo coords
         return (new_x + self.origin[0], new_y + self.origin[1])
