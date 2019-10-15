@@ -45,8 +45,8 @@ class Grid:
         bearing = self.tablerotation
 
         # rotate and scale
-        new_x = x * self.cellSize * math.cos(math.radians(bearing)) - y * self.cellSize * math.sin(math.radians(bearing))
-        new_y = x * self.cellSize * math.sin(math.radians(bearing)) + y * self.cellSize * math.cos(math.radians(bearing))
+        new_x = x * self.cellSize * math.cos(math.radians(bearing)) - y * -self.cellSize * math.sin(math.radians(bearing))
+        new_y = x * self.cellSize * math.sin(math.radians(bearing)) + y * -self.cellSize * math.cos(math.radians(bearing))
 
         # convert to geo coords
         return (new_x + self.origin[0], new_y + self.origin[1])
@@ -197,14 +197,5 @@ if __name__ == "__main__":
     else:
         print("Successfully posted to cityIO", r.status_code)
 
-    # r = urllib.request.Request(post_address, data, {'Content-Type': 'application/json'})
-    # resp = urllib.request.urlopen(r)
-    # print(resp)
-
-    # if not resp == 200:
-    #     print("could not post result to cityIO")
-    #     print("Error code", resp)
-    # else:
-    #     print("Successfully posted to cityIO", resp)
 
     
