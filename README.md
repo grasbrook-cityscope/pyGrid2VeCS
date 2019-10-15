@@ -9,7 +9,9 @@ Output: GeoJSON containing connected road topology
 
 Requires
 * python3
+* pyproj
 
+```python -m pip install -r requirements.txt```
 
 ### Usage
 
