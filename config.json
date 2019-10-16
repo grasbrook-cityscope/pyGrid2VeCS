@@ -1,4 +1,6 @@
 {
     "input_url" : "https://cityio.media.mit.edu/api/table/grasbrook/",
-    "output_url": "https://cityio.media.mit.edu/api/table/update/grasbrook/roadsjson"
+    "output_url": "https://cityio.media.mit.edu/api/table/update/grasbrook/roadsjson",
+    "input_crs" : 4326, 
+    "output_crs": 32632
 }

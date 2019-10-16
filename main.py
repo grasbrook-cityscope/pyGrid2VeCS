@@ -28,14 +28,10 @@ class Grid:
         ret.mapping = data["header"]["mapping"]["type"]
         ret.tablerotation = data["header"]["spatial"]["rotation"]
 
-        proj = Transformer.from_crs(4326, 32632)
+        proj = Transformer.from_crs(getFromCfg("input_crs"), getFromCfg("output_crs"))
+        ret.origin = proj.transform(data["header"]["spatial"]["latitude"], data["header"]["spatial"]["longitude"])
 
-        utm_origin = proj.transform(data["header"]["spatial"]["latitude"], data["header"]["spatial"]["longitude"])
-        print(utm_origin)
-
-        ret.origin = utm_origin
         return ret
-
 
     def RoadAt(self, typejs, x, y):
         cell = gridData[x + y * self.ncols]
@@ -133,17 +129,13 @@ if __name__ == "__main__":
     gridData = data["grid"]
 
     if gridData:
-        print(data["header"]["spatial"])
+        print("got grid:", data["header"]["spatial"])
 
     typejs = {}
     with open("typedefs.json") as file:
         typejs = json.load(file)
 
-    mapping = data["header"]["mapping"]["type"]
-    print(mapping)
-
-
-    ret = "{\"type\": \"FeatureCollection\",\"features\": ["
+    ret = "{\"type\": \"FeatureCollection\",\"features\": [" # geojson front matter
 
     idit = 0
 
@@ -151,11 +143,7 @@ if __name__ == "__main__":
     for idx in range(len(gridData)):
         x = idx % gridDef.ncols
         y = idx // gridDef.ncols
-        cell = gridData[idx]
-
-        print(x,y,":",mapping[cell[1]])
-
-        print(gridDef.RoadAt(typejs,x,y))
+        cell = gridData[idx]    # content of current cell
 
         if x >= gridDef.ncols-1:    # don't consider last row
             continue
@@ -166,7 +154,7 @@ if __name__ == "__main__":
             if gridDef.RoadAt(typejs, x+1, y): # a road goes to the right
                 fromPoint = gridDef.Local2Geo(x,y)
                 toPoint = gridDef.Local2Geo(x+1,y)
-                ret += LineToGeoJSON(fromPoint, toPoint, idit, [])
+                ret += LineToGeoJSON(fromPoint, toPoint, idit, []) # append feature
                 ret +=","
 
                 idit+=1
@@ -174,27 +162,21 @@ if __name__ == "__main__":
             if gridDef.RoadAt(typejs, x, y+1): # a road goes down
                 fromPoint = gridDef.Local2Geo(x,y)
                 toPoint = gridDef.Local2Geo(x,y+1)
-                ret += LineToGeoJSON(fromPoint, toPoint, idit, [])
+                ret += LineToGeoJSON(fromPoint, toPoint, idit, []) # append feature
                 ret +=","
 
                 idit+=1
 
-            
+    ret = ret[:-1] # trim trailing comma
+    ret+= "]}" # geojson end matter
 
-    ret = ret[:-1]
-    ret+= "]}"
-
-    # print(ret)
     writeFile("output.geojson", ret)
 
     # Also post result to cityIO
     post_address = getFromCfg("output_url")
-    print(post_address)
     data= json.loads(ret)
-    print(type(data))
 
     import requests
-
     r = requests.post(post_address, json=data, headers={'Content-Type': 'application/json'})
     print(r)
     if not r.status_code == 200:
