@@ -9,28 +9,28 @@ def getFromCfg(key : str) -> str:
         js = json.load(file)
         return js[key]
 
-def getCurrentState():
-    with urllib.request.urlopen(getFromCfg("input_url")) as url:
+def getCurrentState(topic=""):
+    with urllib.request.urlopen(getFromCfg("input_url")+topic) as url:    # todo: do with requests instead of urllib
         return json.loads(url.read().decode())
     return None
 
-class Grid:
+class Table:
     cellSize = 0
     ncols = 0
     nrows = 0
 
     @staticmethod
     def fromCityIO(data):
-        ret = Grid()
-        ret.cellSize = data["header"]["spatial"]["cellSize"]
-        ret.ncols = data["header"]["spatial"]["ncols"]
-        ret.nrows = data["header"]["spatial"]["nrows"]
-        ret.mapping = data["header"]["mapping"]["type"]
-        ret.tablerotation = data["header"]["spatial"]["rotation"]
-        ret.typeidx = data["header"]["block"].index("type")
+        ret = Table()
+        ret.cellSize = data["spatial"]["cellSize"]
+        ret.ncols = data["spatial"]["ncols"]
+        ret.nrows = data["spatial"]["nrows"]
+        ret.mapping = data["mapping"]["type"]
+        ret.typeidx = data["block"].index("type")
+        ret.tablerotation = data["spatial"]["rotation"]
 
         proj = Transformer.from_crs(getFromCfg("input_crs"), getFromCfg("output_crs"))
-        ret.origin = proj.transform(data["header"]["spatial"]["latitude"], data["header"]["spatial"]["longitude"])
+        ret.origin = proj.transform(data["spatial"]["latitude"], data["spatial"]["longitude"])
 
         return ret
 
@@ -137,7 +137,7 @@ if __name__ == "__main__":
         print("couldn't load input_url!")
         exit()
 
-    gridDef = Grid.fromCityIO(data)
+    gridDef = Table.fromCityIO(getCurrentState("header"))
     gridData = data["grid"]
     gridHash = data["meta"]["hashes"]["grid"]
 
