@@ -131,7 +131,8 @@ def sendToCityIO(data):
     else:
         print("Successfully posted to cityIO", r.status_code)
 
-def appendRoadFeatures(gridDef, gridData):
+def appendRoadFeatures(gridDef):
+    gridData = getCurrentState("grid")
     idit= 0
     resultjson = ""
 
@@ -161,7 +162,7 @@ def appendRoadFeatures(gridDef, gridData):
                 resultjson += LineToGeoJSON(fromPoint, toPoint, idit, []) # append feature
                 resultjson +=","
                 idit+=1
-                
+
     return resultjson
 
 def run():
@@ -170,13 +171,12 @@ def run():
         print("couldn't load input_url!")
         exit()
 
-    gridData = getCurrentState("grid")
     gridHash = getCurrentState("meta/hashes/grid")
 
     resultjson = "{\"type\": \"FeatureCollection\",\"features\": [" # geojson front matter
 
     # find all grid cells with type as in typejs
-    resultjson += appendRoadFeatures(gridDef, gridData)
+    resultjson += appendRoadFeatures(gridDef)
 
     resultjson = resultjson[:-1] # trim trailing comma
     resultjson += "]}" # geojson end matter
@@ -194,11 +194,11 @@ if __name__ == "__main__":
 
     while True:
         gridHash = getCurrentState("meta/hashes/grid")
-        # TODO: wait a couple of seconds
         if gridHash != oldHash:
             run()
             oldHash = gridHash
         else:
+            # TODO: wait a couple of seconds
             print("waiting for grid change")
     
 
