@@ -119,6 +119,17 @@ def writeFile(filepath, data):
     f= open(filepath,"w+")
     f.write(data)
 
+def sendToCityIO(data):
+    post_address = getFromCfg("output_url")
+
+    import requests
+    r = requests.post(post_address, json=data, headers={'Content-Type': 'application/json'})
+    print(r)
+    if not r.status_code == 200:
+        print("could not post result to cityIO")
+        print("Error code", r.status_code)
+    else:
+        print("Successfully posted to cityIO", r.status_code)
 
 if __name__ == "__main__":
     data = getCurrentState() # todo: don't read the whole thing, only grid and header
@@ -128,6 +139,7 @@ if __name__ == "__main__":
 
     gridDef = Grid.fromCityIO(data)
     gridData = data["grid"]
+    gridHash = data["meta"]["hashes"]["grid"]
 
     if gridData:
         print("got grid:", data["header"]["spatial"])
@@ -174,17 +186,10 @@ if __name__ == "__main__":
     writeFile("output.geojson", ret)
 
     # Also post result to cityIO
-    post_address = getFromCfg("output_url")
     data= json.loads(ret)
+    data["grid_hash"] = gridHash # state of grid, the results are based on
 
-    import requests
-    r = requests.post(post_address, json=data, headers={'Content-Type': 'application/json'})
-    print(r)
-    if not r.status_code == 200:
-        print("could not post result to cityIO")
-        print("Error code", r.status_code)
-    else:
-        print("Successfully posted to cityIO", r.status_code)
+    sendToCityIO(data)
 
 
     
