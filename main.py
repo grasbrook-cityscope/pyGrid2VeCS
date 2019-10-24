@@ -35,7 +35,7 @@ class Table:
         return ret
 
     def RoadAt(self, gridData, typejs, x, y):
-        cell = gridData[x + y * self.ncols]
+        cell = gridData[x + y * self.ncols] # content of cell at (x,y)
         return self.mapping[cell[self.typeidx]]["type"] in typejs["type"]
 
     def Local2Geo(self, x, y):
@@ -131,6 +131,39 @@ def sendToCityIO(data):
     else:
         print("Successfully posted to cityIO", r.status_code)
 
+def appendRoadFeatures(gridDef, gridData):
+    idit= 0
+    resultjson = ""
+
+    typejs = {}
+    with open("typedefs.json") as file:
+        typejs = json.load(file)
+
+    for idx in range(len(gridData)):
+        x = idx % gridDef.ncols
+        y = idx // gridDef.ncols
+
+        if x >= gridDef.ncols-1:    # don't consider last row
+            continue
+        if y >= gridDef.nrows-1:    # don't consider last column
+            break
+
+        if gridDef.RoadAt(gridData, typejs, x, y):  # a road starts here
+            fromPoint = gridDef.Local2Geo(x,y)
+            if gridDef.RoadAt(gridData, typejs, x+1, y): # a road goes to the right
+                toPoint = gridDef.Local2Geo(x+1,y)
+                resultjson += LineToGeoJSON(fromPoint, toPoint, idit, []) # append feature
+                resultjson +=","
+                idit+=1
+
+            if gridDef.RoadAt(gridData, typejs, x, y+1): # a road goes down
+                toPoint = gridDef.Local2Geo(x,y+1)
+                resultjson += LineToGeoJSON(fromPoint, toPoint, idit, []) # append feature
+                resultjson +=","
+                idit+=1
+                
+    return resultjson
+
 def run():
     gridDef = Table.fromCityIO(getCurrentState("header"))
     if not gridDef:
@@ -140,47 +173,18 @@ def run():
     gridData = getCurrentState("grid")
     gridHash = getCurrentState("meta/hashes/grid")
 
-    typejs = {}
-    with open("typedefs.json") as file:
-        typejs = json.load(file)
-
-    ret = "{\"type\": \"FeatureCollection\",\"features\": [" # geojson front matter
-
-    idit = 0
+    resultjson = "{\"type\": \"FeatureCollection\",\"features\": [" # geojson front matter
 
     # find all grid cells with type as in typejs
-    for idx in range(len(gridData)):
-        x = idx % gridDef.ncols
-        y = idx // gridDef.ncols
-        cell = gridData[idx]    # content of current cell
+    resultjson += appendRoadFeatures(gridDef, gridData)
 
-        if x >= gridDef.ncols-1:    # don't consider last row
-            continue
-        if y >= gridDef.nrows-1:    # don't consider last column
-            break
+    resultjson = resultjson[:-1] # trim trailing comma
+    resultjson += "]}" # geojson end matter
 
-        if gridDef.RoadAt(gridData, typejs,x,y):  # a road starts here
-            if gridDef.RoadAt(gridData, typejs, x+1, y): # a road goes to the right
-                fromPoint = gridDef.Local2Geo(x,y)
-                toPoint = gridDef.Local2Geo(x+1,y)
-                ret += LineToGeoJSON(fromPoint, toPoint, idit, []) # append feature
-                ret +=","
-                idit+=1
-
-            if gridDef.RoadAt(gridData, typejs, x, y+1): # a road goes down
-                fromPoint = gridDef.Local2Geo(x,y)
-                toPoint = gridDef.Local2Geo(x,y+1)
-                ret += LineToGeoJSON(fromPoint, toPoint, idit, []) # append feature
-                ret +=","
-                idit+=1
-
-    ret = ret[:-1] # trim trailing comma
-    ret+= "]}" # geojson end matter
-
-    writeFile("output.geojson", ret)
+    writeFile("output.geojson", resultjson)
 
     # Also post result to cityIO
-    data= json.loads(ret)
+    data = json.loads(resultjson)
     data["grid_hash"] = gridHash # state of grid, the results are based on
 
     sendToCityIO(data)
