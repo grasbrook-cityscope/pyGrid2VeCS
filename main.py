@@ -34,7 +34,7 @@ class Table:
 
         return ret
 
-    def RoadAt(self, typejs, x, y):
+    def RoadAt(self, gridData, typejs, x, y):
         cell = gridData[x + y * self.ncols]
         return self.mapping[cell[self.typeidx]]["type"] in typejs["type"]
 
@@ -131,18 +131,14 @@ def sendToCityIO(data):
     else:
         print("Successfully posted to cityIO", r.status_code)
 
-if __name__ == "__main__":
-    data = getCurrentState() # todo: don't read the whole thing, only grid and header
-    if not data:
+def run():
+    gridDef = Table.fromCityIO(getCurrentState("header"))
+    if not gridDef:
         print("couldn't load input_url!")
         exit()
 
-    gridDef = Table.fromCityIO(getCurrentState("header"))
-    gridData = data["grid"]
-    gridHash = data["meta"]["hashes"]["grid"]
-
-    if gridData:
-        print("got grid:", data["header"]["spatial"])
+    gridData = getCurrentState("grid")
+    gridHash = getCurrentState("meta/hashes/grid")
 
     typejs = {}
     with open("typedefs.json") as file:
@@ -163,21 +159,19 @@ if __name__ == "__main__":
         if y >= gridDef.nrows-1:    # don't consider last column
             break
 
-        if gridDef.RoadAt(typejs,x,y):  # a road starts here
-            if gridDef.RoadAt(typejs, x+1, y): # a road goes to the right
+        if gridDef.RoadAt(gridData, typejs,x,y):  # a road starts here
+            if gridDef.RoadAt(gridData, typejs, x+1, y): # a road goes to the right
                 fromPoint = gridDef.Local2Geo(x,y)
                 toPoint = gridDef.Local2Geo(x+1,y)
                 ret += LineToGeoJSON(fromPoint, toPoint, idit, []) # append feature
                 ret +=","
-
                 idit+=1
 
-            if gridDef.RoadAt(typejs, x, y+1): # a road goes down
+            if gridDef.RoadAt(gridData, typejs, x, y+1): # a road goes down
                 fromPoint = gridDef.Local2Geo(x,y)
                 toPoint = gridDef.Local2Geo(x,y+1)
                 ret += LineToGeoJSON(fromPoint, toPoint, idit, []) # append feature
                 ret +=","
-
                 idit+=1
 
     ret = ret[:-1] # trim trailing comma
@@ -190,6 +184,19 @@ if __name__ == "__main__":
     data["grid_hash"] = gridHash # state of grid, the results are based on
 
     sendToCityIO(data)
+
+if __name__ == "__main__":
+    oldHash = ""
+
+    while True:
+        gridHash = getCurrentState("meta/hashes/grid")
+        # TODO: wait a couple of seconds
+        if gridHash != oldHash:
+            run()
+            oldHash = gridHash
+        else:
+            print("waiting for grid change")
+    
 
 
     
