@@ -27,6 +27,7 @@ class Grid:
         ret.nrows = data["header"]["spatial"]["nrows"]
         ret.mapping = data["header"]["mapping"]["type"]
         ret.tablerotation = data["header"]["spatial"]["rotation"]
+        ret.typeidx = data["header"]["block"].index("type")
 
         proj = Transformer.from_crs(getFromCfg("input_crs"), getFromCfg("output_crs"))
         ret.origin = proj.transform(data["header"]["spatial"]["latitude"], data["header"]["spatial"]["longitude"])
@@ -35,7 +36,7 @@ class Grid:
 
     def RoadAt(self, typejs, x, y):
         cell = gridData[x + y * self.ncols]
-        return self.mapping[cell[1]] in typejs["type"]
+        return self.mapping[cell[self.typeidx]]["type"] in typejs["type"]
 
     def Local2Geo(self, x, y):
         bearing = self.tablerotation
@@ -120,7 +121,7 @@ def writeFile(filepath, data):
 
 
 if __name__ == "__main__":
-    data = getCurrentState()
+    data = getCurrentState() # todo: don't read the whole thing, only grid and header
     if not data:
         print("couldn't load input_url!")
         exit()

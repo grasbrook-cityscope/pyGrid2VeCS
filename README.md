@@ -10,12 +10,18 @@ Output: GeoJSON containing connected road topology
 Requires
 * python3
 * pyproj
+* requests
+* docker optional
 
-```python -m pip install -r requirements.txt```
+```./install.sh``` (docker)
+
+```pip install -r requirements.txt``` (without docker)
 
 ### Usage
 
-```python main.py```
+```./run.sh``` (docker)
+
+```python main.py``` (without docker)
 
 
 ### Description
