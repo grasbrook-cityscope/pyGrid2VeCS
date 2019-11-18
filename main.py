@@ -36,6 +36,7 @@ class Table:
 
     def RoadAt(self, gridData, typejs, x, y):
         cell = gridData[x + y * self.ncols] # content of cell at (x,y)
+        if not "type" in self.mapping[cell[self.typeidx]]: return False
         return self.mapping[cell[self.typeidx]]["type"] in typejs["type"]
 
     def Local2Geo(self, x, y):
