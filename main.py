@@ -29,7 +29,7 @@ class Table:
         ret.typeidx = data["block"].index("type")
         ret.tablerotation = data["spatial"]["rotation"]
 
-        proj = Transformer.from_crs(getFromCfg("input_crs"), getFromCfg("output_crs"))
+        proj = Transformer.from_crs(getFromCfg("input_crs"), getFromCfg("compute_crs"))
         ret.origin = proj.transform(data["spatial"]["latitude"], data["spatial"]["longitude"])
 
         return ret
@@ -75,15 +75,16 @@ def LineToGeoJSON(fromPoint, toPoint, id, properties):
     ret += str(id) 
     ret += "\",\"geometry\": {\"type\": \"LineString\",\"coordinates\": [["
 
-    ret += str(fromPoint[0])
-    ret += ","
+    # lat, lon order
     ret += str(fromPoint[1])
+    ret += ","
+    ret += str(fromPoint[0])
 
     ret += "],["
 
-    ret += str(toPoint[0])
-    ret += ","
     ret += str(toPoint[1])
+    ret += ","
+    ret += str(toPoint[0])
 
     ret += "]]},"
     ret += "\"properties\": "
@@ -141,6 +142,7 @@ def appendRoadFeatures(gridDef):
     with open("typedefs.json") as file:
         typejs = json.load(file)
 
+    proj = Transformer.from_crs(getFromCfg("compute_crs"), getFromCfg("output_crs"))
     for idx in range(len(gridData)):
         x = idx % gridDef.ncols
         y = idx // gridDef.ncols
@@ -152,14 +154,17 @@ def appendRoadFeatures(gridDef):
 
         if gridDef.RoadAt(gridData, typejs, x, y):  # a road starts here
             fromPoint = gridDef.Local2Geo(x,y)
+            fromPoint = proj.transform(fromPoint[0],fromPoint[1])
             if gridDef.RoadAt(gridData, typejs, x+1, y): # a road goes to the right
                 toPoint = gridDef.Local2Geo(x+1,y)
+                toPoint = proj.transform(toPoint[0],toPoint[1])
                 resultjson += LineToGeoJSON(fromPoint, toPoint, idit, []) # append feature
                 resultjson +=","
                 idit+=1
 
             if gridDef.RoadAt(gridData, typejs, x, y+1): # a road goes down
                 toPoint = gridDef.Local2Geo(x,y+1)
+                toPoint = proj.transform(toPoint[0],toPoint[1])
                 resultjson += LineToGeoJSON(fromPoint, toPoint, idit, []) # append feature
                 resultjson +=","
                 idit+=1
