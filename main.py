@@ -39,6 +39,11 @@ class Table:
         if not "type" in self.mapping[cell[self.typeidx]]: return False
         return self.mapping[cell[self.typeidx]]["type"] in typejs["type"]
 
+    def getPropertiesForCell(self, gridData, x, y):
+        cell = gridData[x + y * self.ncols]  # content of cell at (x,y)
+        if not "type" in self.mapping[cell[self.typeidx]]: return []
+        return self.mapping[cell[self.typeidx]]
+
     def Local2Geo(self, x, y):
         bearing = self.tablerotation
 
@@ -71,7 +76,7 @@ def PointToGeoJSON(lat, lon, id, properties):
     return ret
 
 def LineToGeoJSON(fromPoint, toPoint, id, properties):
-    ret = "{\"type\": \"Feature\",\"id\": \"" 
+    ret = "{\"type\": \"Feature\",\"id\": \""
     ret += str(id) 
     ret += "\",\"geometry\": {\"type\": \"LineString\",\"coordinates\": [["
 
@@ -88,7 +93,7 @@ def LineToGeoJSON(fromPoint, toPoint, id, properties):
 
     ret += "]]},"
     ret += "\"properties\": "
-    ret += str(properties)
+    ret += str(json.dumps(properties))
     ret += "}"
     return ret
 
@@ -138,6 +143,8 @@ def appendRoadFeatures(gridDef):
     idit= 0
     resultjson = ""
 
+    print(gridDef.mapping)
+
     typejs = {}
     with open("typedefs.json") as file:
         typejs = json.load(file)
@@ -153,19 +160,22 @@ def appendRoadFeatures(gridDef):
             break
 
         if gridDef.RoadAt(gridData, typejs, x, y):  # a road starts here
+            print(gridData[x + y * gridDef.ncols])
+            properties = gridDef.getPropertiesForCell(gridData, x, y)
+            print(properties)
             fromPoint = gridDef.Local2Geo(x,y)
             fromPoint = proj.transform(fromPoint[0],fromPoint[1])
             if gridDef.RoadAt(gridData, typejs, x+1, y): # a road goes to the right
                 toPoint = gridDef.Local2Geo(x+1,y)
                 toPoint = proj.transform(toPoint[0],toPoint[1])
-                resultjson += LineToGeoJSON(fromPoint, toPoint, idit, []) # append feature
+                resultjson += LineToGeoJSON(fromPoint, toPoint, idit, properties) # append feature
                 resultjson +=","
                 idit+=1
 
             if gridDef.RoadAt(gridData, typejs, x, y+1): # a road goes down
                 toPoint = gridDef.Local2Geo(x,y+1)
                 toPoint = proj.transform(toPoint[0],toPoint[1])
-                resultjson += LineToGeoJSON(fromPoint, toPoint, idit, []) # append feature
+                resultjson += LineToGeoJSON(fromPoint, toPoint, idit, properties) # append feature
                 resultjson +=","
                 idit+=1
 
